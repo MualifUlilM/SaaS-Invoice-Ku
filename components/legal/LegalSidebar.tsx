@@ -15,6 +15,52 @@ interface LegalSidebarProps {
   title:    string;
 }
 
+interface NavListProps {
+  sections: NavSection[];
+  activeId: string;
+  onSelect: (id: string) => void;
+}
+
+function NavList({ sections, activeId, onSelect }: NavListProps) {
+  return (
+    <nav aria-label="Navigasi cepat kebijakan">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+        Navigasi Cepat
+      </p>
+      <ol className="space-y-1">
+        {sections.map(({ id, label }, index) => {
+          const isActive = activeId === id;
+          return (
+            <li key={id}>
+              <button
+                onClick={() => onSelect(id)}
+                className={[
+                  "group flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left text-sm transition-all duration-150",
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700 font-semibold"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors",
+                    isActive
+                      ? "bg-indigo-600 text-white"
+                      : "bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-500",
+                  ].join(" ")}
+                >
+                  {index + 1}
+                </span>
+                <span className="leading-snug">{label}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 
 export function LegalSidebar({ sections, title }: LegalSidebarProps) {
@@ -63,45 +109,6 @@ export function LegalSidebar({ sections, title }: LegalSidebarProps) {
     setMobileOpen(false);
   };
 
-  // ── Shared nav list ────────────────────────────────────────────────────────
-  const NavList = () => (
-    <nav aria-label="Navigasi cepat kebijakan">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
-        Navigasi Cepat
-      </p>
-      <ol className="space-y-1">
-        {sections.map(({ id, label }, index) => {
-          const isActive = activeId === id;
-          return (
-            <li key={id}>
-              <button
-                onClick={() => handleClick(id)}
-                className={[
-                  "group flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left text-sm transition-all duration-150",
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 font-semibold"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800",
-                ].join(" ")}
-              >
-                <span
-                  className={[
-                    "mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors",
-                    isActive
-                      ? "bg-indigo-600 text-white"
-                      : "bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-500",
-                  ].join(" ")}
-                >
-                  {index + 1}
-                </span>
-                <span className="leading-snug">{label}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
-  );
-
   return (
     <>
       {/* ── Desktop sidebar ─────────────────────────────────────────────────── */}
@@ -111,7 +118,7 @@ export function LegalSidebar({ sections, title }: LegalSidebarProps) {
             <FileText className="h-4 w-4 text-indigo-500" />
             <span className="text-sm font-semibold text-slate-800">{title}</span>
           </div>
-          <NavList />
+          <NavList sections={sections} activeId={activeId} onSelect={handleClick} />
         </div>
       </aside>
 
@@ -149,7 +156,7 @@ export function LegalSidebar({ sections, title }: LegalSidebarProps) {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <NavList />
+            <NavList sections={sections} activeId={activeId} onSelect={handleClick} />
           </div>
         </>
       )}

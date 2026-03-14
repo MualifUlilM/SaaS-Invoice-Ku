@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Minus, Zap, Shield, Building2, ArrowRight } from "lucide-react";
-import { Button, Badge, Card, CardHeader, CardBody, CardFooter } from "@/components/ui";
+import { Button, Badge } from "@/components/ui";
 import { PricingHero } from "./PricingHero";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -248,15 +249,16 @@ function TierCard({
 
       {/* CTA */}
       <div className="px-7 pb-8">
-        <Button
-          variant={tier.ctaVariant}
-          size="lg"
-          rightIcon={<ArrowRight size={16} />}
-          className="w-full justify-center"
-          onClick={() => (window.location.href = tier.ctaHref)}
-        >
-          {tier.cta}
-        </Button>
+        <Link href={tier.ctaHref}>
+          <Button
+            variant={tier.ctaVariant}
+            size="lg"
+            rightIcon={<ArrowRight size={16} />}
+            className="w-full justify-center"
+          >
+            {tier.cta}
+          </Button>
+        </Link>
       </div>
     </motion.div>
   );

@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { FileText, TrendingUp, Shield, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui";
-import { Input } from "@/components/ui";
+import { FileText, Shield, TrendingUp } from "lucide-react";
 import { GoogleOAuthButton } from "@/components/auth/GoogleOAuthButton";
 import { PasswordInput } from "@/components/auth/PasswordInput";
-
-// ─── LEFT PANEL ───────────────────────────────────────────────────────────────
+import { Button, Input } from "@/components/ui";
+import { signInAction } from "@/lib/actions/auth";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const benefits = [
   {
@@ -29,7 +29,6 @@ const benefits = [
   },
 ];
 
-// Floating invoice card mockup data
 const floatingCards = [
   {
     id: "INV-2024-001",
@@ -65,35 +64,30 @@ const floatingCards = [
 
 function LeftPanel() {
   return (
-    <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-500 to-indigo-400 flex-col justify-between p-12">
-      {/* Dot pattern overlay */}
+    <div className="relative hidden overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-500 to-indigo-400 p-12 lg:flex lg:w-1/2 lg:flex-col lg:justify-between">
       <div
-        className="absolute inset-0 opacity-20 pointer-events-none"
+        className="pointer-events-none absolute inset-0 opacity-20"
         style={{
-          backgroundImage:
-            "radial-gradient(circle, #fff 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)",
           backgroundSize: "28px 28px",
         }}
       />
 
-      {/* Top: Logo + tagline */}
       <div className="relative z-10">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
-            <FileText className="w-5 h-5 text-white" />
+        <div className="mb-4 flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20">
+            <FileText className="h-5 w-5 text-white" />
           </div>
-          <span className="text-2xl font-bold text-white tracking-tight">
+          <span className="text-2xl font-bold tracking-tight text-white">
             InvoiceKu
           </span>
         </div>
-        <p className="text-indigo-100 text-base leading-relaxed max-w-xs">
-          Platform manajemen invoice terpercaya untuk freelancer dan bisnis
-          Indonesia.
+        <p className="max-w-xs text-base leading-relaxed text-indigo-100">
+          Platform manajemen invoice terpercaya untuk freelancer dan bisnis Indonesia.
         </p>
       </div>
 
-      {/* Middle: Floating invoice cards */}
-      <div className="relative z-10 flex-1 my-8">
+      <div className="relative z-10 my-8 flex-1">
         <div className="relative h-56">
           {floatingCards.map((card) => (
             <motion.div
@@ -103,39 +97,32 @@ function LeftPanel() {
               transition={{ delay: card.delay, duration: 0.5, ease: "easeOut" }}
               className={`absolute ${card.offset} ${card.rotate}`}
             >
-              <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl p-4 w-52 border border-white/60">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-indigo-600">
-                    {card.id}
-                  </span>
+              <div className="w-52 rounded-xl border border-white/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-indigo-600">{card.id}</span>
                   <span
-                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${card.statusColor}`}
+                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${card.statusColor}`}
                   >
                     {card.status}
                   </span>
                 </div>
-                <p className="text-sm font-medium text-slate-800 truncate">
-                  {card.client}
-                </p>
-                <p className="text-base font-bold text-slate-900 mt-1">
-                  {card.amount}
-                </p>
+                <p className="truncate text-sm font-medium text-slate-800">{card.client}</p>
+                <p className="mt-1 text-base font-bold text-slate-900">{card.amount}</p>
               </div>
             </motion.div>
           ))}
         </div>
       </div>
 
-      {/* Bottom: Benefit points */}
       <div className="relative z-10 space-y-4">
         {benefits.map(({ icon: Icon, title, desc }) => (
           <div key={title} className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mt-0.5">
-              <Icon className="w-4 h-4 text-white" />
+            <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/20">
+              <Icon className="h-4 w-4 text-white" />
             </div>
             <div>
               <p className="text-sm font-semibold text-white">{title}</p>
-              <p className="text-xs text-indigo-100 leading-relaxed">{desc}</p>
+              <p className="text-xs leading-relaxed text-indigo-100">{desc}</p>
             </div>
           </div>
         ))}
@@ -144,74 +131,38 @@ function LeftPanel() {
   );
 }
 
-// ─── LOGIN FORM ───────────────────────────────────────────────────────────────
-
-interface FormState {
-  email: string;
-  password: string;
+interface LoginFormProps {
+  onSuccess: (redirectTo: string) => void;
 }
 
-interface FormErrors {
-  email?: string;
-  password?: string;
-  general?: string;
-}
+function LoginForm({ onSuccess }: LoginFormProps) {
+  const [values, setValues] = useState({ email: "", password: "" });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isPending, startTransition] = useTransition();
 
-function validate(values: FormState): FormErrors {
-  const errors: FormErrors = {};
-  if (!values.email) {
-    errors.email = "Email wajib diisi.";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
-    errors.email = "Format email tidak valid.";
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    startTransition(async () => {
+      const result = await signInAction(values);
+
+      if (!result.success) {
+        setErrors(result.errors ?? {});
+        return;
+      }
+
+      setErrors({});
+      onSuccess(result.redirectTo || "/dashboard");
+    });
   }
-  if (!values.password) {
-    errors.password = "Password wajib diisi.";
-  } else if (values.password.length < 6) {
-    errors.password = "Password minimal 6 karakter.";
-  }
-  return errors;
-}
-
-function LoginForm() {
-  const [values, setValues] = useState<FormState>({ email: "", password: "" });
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleChange = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setValues((prev) => ({ ...prev, [field]: e.target.value }));
-    if (submitted) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitted(true);
-    const errs = validate(values);
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      return;
-    }
-    setErrors({});
-    setIsLoading(true);
-    try {
-      // TODO: connect to auth provider (e.g. NextAuth, Supabase, Clerk)
-      await new Promise((res) => setTimeout(res, 1500));
-    } catch {
-      setErrors({ general: "Terjadi kesalahan. Silakan coba lagi." });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
-      {errors.general && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+      {errors.general ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {errors.general}
         </div>
-      )}
+      ) : null}
 
       <Input
         label="Email"
@@ -219,11 +170,14 @@ function LoginForm() {
         type="email"
         placeholder="nama@email.com"
         value={values.email}
-        onChange={handleChange("email")}
+        onChange={(event) => {
+          setValues((current) => ({ ...current, email: event.target.value }));
+          setErrors((current) => ({ ...current, email: "", general: "" }));
+        }}
         error={errors.email}
         required
         autoComplete="email"
-        disabled={isLoading}
+        disabled={isPending}
       />
 
       <div className="space-y-1">
@@ -232,16 +186,19 @@ function LoginForm() {
           id="password"
           placeholder="Masukkan password"
           value={values.password}
-          onChange={handleChange("password")}
+          onChange={(event) => {
+            setValues((current) => ({ ...current, password: event.target.value }));
+            setErrors((current) => ({ ...current, password: "", general: "" }));
+          }}
           error={errors.password}
           required
           autoComplete="current-password"
-          disabled={isLoading}
+          disabled={isPending}
         />
         <div className="flex justify-end">
           <Link
             href="/forgot-password"
-            className="text-xs text-indigo-600 hover:text-indigo-700 hover:underline transition-colors"
+            className="text-xs text-indigo-600 transition-colors hover:text-indigo-700 hover:underline"
           >
             Lupa password?
           </Link>
@@ -252,8 +209,8 @@ function LoginForm() {
         type="submit"
         variant="primary"
         size="lg"
-        isLoading={isLoading}
-        className="w-full mt-2"
+        isLoading={isPending}
+        className="mt-2 w-full"
       >
         Masuk
       </Button>
@@ -261,61 +218,90 @@ function LoginForm() {
   );
 }
 
-// ─── PAGE ─────────────────────────────────────────────────────────────────────
+function getLoginMessage(message: string | null) {
+  if (message === "check-email") {
+    return "Cek email Anda untuk verifikasi akun sebelum masuk.";
+  }
 
-export default function LoginPage() {
+  if (message === "signed-out") {
+    return "Anda telah keluar dari akun.";
+  }
+
+  return "";
+}
+
+function LoginPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [oauthError, setOauthError] = useState("");
+  const infoMessage = getLoginMessage(searchParams.get("message"));
+
+  async function handleGoogleSignIn() {
+    setOauthError("");
+    const supabase = createSupabaseBrowserClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+      },
+    });
+
+    if (error) {
+      setOauthError(error.message);
+    }
+  }
+
   return (
-    <div className="min-h-screen flex">
-      {/* Left panel */}
+    <div className="flex min-h-screen">
       <LeftPanel />
 
-      {/* Right panel */}
-      <div className="flex flex-1 lg:w-1/2 items-center justify-center bg-white px-6 py-12 sm:px-12">
+      <div className="flex flex-1 items-center justify-center bg-white px-6 py-12 sm:px-12 lg:w-1/2">
         <motion.div
           initial={{ opacity: 0, x: 32 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.45, ease: "easeOut" }}
           className="w-full max-w-md"
         >
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <FileText className="w-4 h-4 text-white" />
+          <div className="mb-8 flex items-center gap-2 lg:hidden">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600">
+              <FileText className="h-4 w-4 text-white" />
             </div>
             <span className="text-xl font-bold text-slate-900">InvoiceKu</span>
           </div>
 
-          {/* Heading */}
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-              Masuk ke Akun
-            </h1>
+            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Masuk ke Akun</h1>
             <p className="mt-2 text-sm text-slate-500">
-              Selamat datang kembali! Masukkan detail akun Anda.
+              Selamat datang kembali. Masukkan detail akun Anda.
             </p>
           </div>
 
-          {/* Google OAuth */}
-          <GoogleOAuthButton />
+          {infoMessage ? (
+            <div className="mb-5 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+              {infoMessage}
+            </div>
+          ) : null}
 
-          {/* Divider */}
+          <GoogleOAuthButton onClick={handleGoogleSignIn} />
+          {oauthError ? (
+            <p className="mt-3 text-sm text-red-600">{oauthError}</p>
+          ) : null}
+
           <div className="my-6 flex items-center gap-3">
-            <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-xs text-slate-400 font-medium whitespace-nowrap">
+            <div className="h-px flex-1 bg-slate-200" />
+            <span className="whitespace-nowrap text-xs font-medium text-slate-400">
               atau lanjutkan dengan email
             </span>
-            <div className="flex-1 h-px bg-slate-200" />
+            <div className="h-px flex-1 bg-slate-200" />
           </div>
 
-          {/* Login form */}
-          <LoginForm />
+          <LoginForm onSuccess={(redirectTo) => router.push(redirectTo)} />
 
-          {/* Register link */}
           <p className="mt-8 text-center text-sm text-slate-500">
             Belum punya akun?{" "}
             <Link
               href="/register"
-              className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline transition-colors"
+              className="font-semibold text-indigo-600 transition-colors hover:text-indigo-700 hover:underline"
             >
               Daftar sekarang
             </Link>
@@ -323,5 +309,13 @@ export default function LoginPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

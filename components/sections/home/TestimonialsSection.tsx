@@ -102,7 +102,9 @@ function TestimonialCard({ testimonial, index }: { testimonial: typeof testimoni
     >
       <StarRating count={testimonial.rating} />
 
-      <p className="text-sm text-slate-600 leading-relaxed flex-1">"{testimonial.text}"</p>
+      <p className="text-sm text-slate-600 leading-relaxed flex-1">
+        &ldquo;{testimonial.text}&rdquo;
+      </p>
 
       <div className="flex items-center gap-3 pt-2 border-t border-slate-50">
         <div

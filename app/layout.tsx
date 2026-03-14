@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { RootShell } from "@/components/providers/RootShell";
 
 // ─── FONT ─────────────────────────────────────────────────────────────────────
 
@@ -92,12 +91,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={inter.variable}>
-      <body className="antialiased min-h-screen flex flex-col bg-white text-slate-900">
-        <Navbar />
-        <main className="flex-1 pt-16">
-          {children}
-        </main>
-        <Footer />
+      <body className="antialiased min-h-screen bg-white text-slate-900">
+        <RootShell>{children}</RootShell>
       </body>
     </html>
   );

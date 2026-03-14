@@ -1,7 +1,6 @@
 "use client";
 
-import type { Metadata } from "next";
-import React, { useState } from "react";
+import React, { useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import {
   Mail,
@@ -15,6 +14,7 @@ import {
 import { SectionWrapper } from "@/components/layout";
 import { Button } from "@/components/ui";
 import { Input } from "@/components/ui";
+import { createContactMessageAction } from "@/lib/actions/contact";
 
 // ─── CONTACT INFO ──────────────────────────────────────────────────────────────
 
@@ -80,8 +80,9 @@ function ContactForm() {
     message: "",
   });
   const [errors, setErrors] = useState<Partial<FormState>>({});
-  const [loading, setLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
+  const [generalError, setGeneralError] = useState("");
 
   const validate = (v: FormState): Partial<FormState> => {
     const e: Partial<FormState> = {};
@@ -114,10 +115,19 @@ function ContactForm() {
       setErrors(errs);
       return;
     }
-    setLoading(true);
-    await new Promise((res) => setTimeout(res, 1500));
-    setLoading(false);
-    setSubmitted(true);
+
+    setGeneralError("");
+    startTransition(async () => {
+      const result = await createContactMessageAction(values);
+
+      if (!result.success) {
+        setErrors(result.errors as Partial<FormState>);
+        setGeneralError(result.errors?.general ?? "");
+        return;
+      }
+
+      setSubmitted(true);
+    });
   };
 
   if (submitted) {
@@ -154,6 +164,12 @@ function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
+      {generalError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {generalError}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <Input
           label="Nama Lengkap"
@@ -236,10 +252,10 @@ function ContactForm() {
         variant="primary"
         size="lg"
         className="w-full"
-        isLoading={loading}
-        rightIcon={!loading ? <Send size={16} /> : undefined}
+        isLoading={isPending}
+        rightIcon={!isPending ? <Send size={16} /> : undefined}
       >
-        {loading ? "Mengirim..." : "Kirim Pesan"}
+        {isPending ? "Mengirim..." : "Kirim Pesan"}
       </Button>
     </form>
   );

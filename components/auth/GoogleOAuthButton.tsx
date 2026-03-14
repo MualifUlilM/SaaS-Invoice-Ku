@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
 interface GoogleOAuthButtonProps {
-  onClick?: () => void;
+  onClick?: () => void | Promise<void>;
   className?: string;
 }
 
@@ -52,7 +52,7 @@ export const GoogleOAuthButton: React.FC<GoogleOAuthButtonProps> = ({
     setIsLoading(true);
     try {
       if (onClick) {
-        onClick();
+        await onClick();
       } else {
         // Simulate async until OAuth provider is connected
         await new Promise((res) => setTimeout(res, 1500));

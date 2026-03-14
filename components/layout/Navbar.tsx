@@ -27,10 +27,13 @@ const navLinks: NavLink[] = [
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 
 export function Navbar() {
+  const pathname = usePathname();
   const [isScrolled,    setIsScrolled]    = useState(false);
   const [isMobileOpen,  setIsMobileOpen]  = useState(false);
+  const [mobileMenuPath, setMobileMenuPath] = useState("");
   const [activeHash,    setActiveHash]    = useState<string>("");
-  const pathname = usePathname();
+  const isMobileMenuVisible = isMobileOpen && mobileMenuPath === pathname;
+  const currentActiveHash = pathname === "/" ? activeHash : "";
 
   // ── Scroll → sticky shadow + blur ──────────────────────────────────────────
   useEffect(() => {
@@ -40,15 +43,9 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  // ── Close mobile menu on route change ──────────────────────────────────────
-  useEffect(() => {
-    setIsMobileOpen(false);
-  }, [pathname]);
-
   // ── IntersectionObserver → active hash section ─────────────────────────────
   useEffect(() => {
     if (pathname !== "/") {
-      setActiveHash("");
       return;
     }
 
@@ -100,10 +97,10 @@ export function Navbar() {
   // ── Active state ───────────────────────────────────────────────────────────
   const isActive = (link: NavLink): boolean => {
     if (link.hash) {
-      return pathname === "/" && activeHash === link.hash;
+      return pathname === "/" && currentActiveHash === link.hash;
     }
     if (link.href === "/") {
-      return pathname === "/" && activeHash === "";
+      return pathname === "/" && currentActiveHash === "";
     }
     return pathname.startsWith(link.href);
   };
@@ -166,13 +163,21 @@ export function Navbar() {
 
           {/* ── Mobile Hamburger ── */}
           <button
-            onClick={() => setIsMobileOpen((prev) => !prev)}
+            onClick={() => {
+              if (isMobileMenuVisible) {
+                setIsMobileOpen(false);
+                return;
+              }
+
+              setMobileMenuPath(pathname);
+              setIsMobileOpen(true);
+            }}
             className="md:hidden flex items-center justify-center h-9 w-9 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors duration-200"
-            aria-label={isMobileOpen ? "Tutup menu" : "Buka menu"}
-            aria-expanded={isMobileOpen}
+            aria-label={isMobileMenuVisible ? "Tutup menu" : "Buka menu"}
+            aria-expanded={isMobileMenuVisible}
           >
             <AnimatePresence mode="wait" initial={false}>
-              {isMobileOpen ? (
+              {isMobileMenuVisible ? (
                 <motion.span
                   key="close"
                   initial={{ rotate: -90, opacity: 0 }}
@@ -200,7 +205,7 @@ export function Navbar() {
 
       {/* ── Mobile Menu (slide-down) ── */}
       <AnimatePresence>
-        {isMobileOpen && (
+        {isMobileMenuVisible && (
           <motion.div
             key="mobile-menu"
             initial={{ opacity: 0, height: 0 }}
